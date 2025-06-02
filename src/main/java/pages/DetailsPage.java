@@ -6,11 +6,12 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.TimeoutException; // Import TimeoutException
+import org.openqa.selenium.JavascriptExecutor; // Import JavascriptExecutor
 import java.time.Duration;
 
-public class DetailsPage {
-
-    private final WebDriver driver;
+// DetailsPage now extends BasePage
+public class DetailsPage extends BasePage {
 
     // Locators for elements on the Details Page
     private final By checkInDateDisplay = By.cssSelector("button[data-testid='date-display-field-start']");
@@ -21,24 +22,24 @@ public class DetailsPage {
 
     private final By roomAmountDropdown = By.cssSelector("select[data-testid='select-room-trigger']");
 
-    // This is the locator as it was when it was causing TimeoutException on elementToBeClickable
-    private final By reserveButtonLocator = By.cssSelector("button.txp-bui-main-pp.bui-button--primary.js-reservation-button");
+    // Locator for the "I'll reserve" button - now uncommented and used
+    private final By iWillReserveButton = By.cssSelector("button.txp-bui-main-pp.bui-button--primary.js-reservation-button");
 
 
+    // Constructor now calls the BasePage constructor
     public DetailsPage(WebDriver driver) {
-        this.driver = driver;
+        super(driver); // Pass the driver to the BasePage constructor
     }
 
     /**
      * Asserts that the displayed check-in and check-out dates match the expected dates.
      */
     public boolean verifyDisplayedDates(String expectedCheckInDisplayFormat, String expectedCheckOutDisplayFormat) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-
-        String actualCheckInText = wait.until(ExpectedConditions.visibilityOfElementLocated(checkInDateDisplay)).getText().trim();
+        // Using inherited waitForVisibility method
+        String actualCheckInText = waitForVisibility(checkInDateDisplay, 10).getText().trim();
         System.out.println("Displayed Check-in Date: " + actualCheckInText);
 
-        String actualCheckOutText = wait.until(ExpectedConditions.visibilityOfElementLocated(checkOutDateDisplay)).getText().trim();
+        String actualCheckOutText = waitForVisibility(checkOutDateDisplay, 10).getText().trim();
         System.out.println("Displayed Check-out Date: " + actualCheckOutText);
 
         boolean checkInMatch = actualCheckInText.contains(expectedCheckInDisplayFormat);
@@ -52,59 +53,59 @@ public class DetailsPage {
      * @param bedType "Twin" (for 2 single beds) or "Double" (for 1 large double bed) (case-insensitive)
      */
     public void selectBedType(String bedType) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         WebElement bedOption = null;
 
         if (bedType != null && bedType.equalsIgnoreCase("Twin")) {
-            bedOption = wait.until(ExpectedConditions.elementToBeClickable(twinBedsRadio));
+            // Using inherited clickElement method
+            bedOption = clickElement(twinBedsRadio, 10);
         } else if (bedType != null && bedType.equalsIgnoreCase("Double")) {
-            bedOption = wait.until(ExpectedConditions.elementToBeClickable(largeDoubleBedRadio));
-        } else {
-            System.out.println("No specific bed type requested or invalid bed type: " + bedType + ".");
-            return;
+            // Using inherited clickElement method
+            bedOption = clickElement(largeDoubleBedRadio, 10);
         }
 
-        if (bedOption != null && !bedOption.isSelected()) {
-            bedOption.click();
-            System.out.println("Selected bed type: " + bedType);
-        }
+
     }
-
     /**
      * Clicks the "I'll reserve" button.
+     * Attempts a standard Selenium click first, falls back to JavaScript click if timed out.
      */
     private void clickIWillReserveButton() {
-        // This is the line that was failing with TimeoutException
-        new WebDriverWait(driver, Duration.ofSeconds(15)) // Increased wait time to 15 seconds
-                .until(ExpectedConditions.elementToBeClickable(reserveButtonLocator))
-                .click();
-        System.out.println("Clicked 'I'll reserve' button.");
+        try {
+            // Attempt standard Selenium click using inherited method
+            clickElement(iWillReserveButton, 15);
+        } catch (TimeoutException e) {
+            // Fallback to JavaScript click
+            WebElement button = driver.findElement(iWillReserveButton);
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+            js.executeScript("arguments[0].click();", button);
+        }
     }
 
     /**
      * Selects the specified amount of rooms and clicks the "I'll reserve" button.
      */
-    public void selectRoomAmountAndReserve(String amount) {
+    public void selectRoomAmountAndReserve(String amount) throws InterruptedException {
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
         WebElement amountDropdownElement = wait.until(ExpectedConditions.elementToBeClickable(roomAmountDropdown));
         Select selectAmount = new Select(amountDropdownElement);
         selectAmount.selectByValue(amount);
         System.out.println("Selected " + amount + " room(s).");
-
-
-        clickIWillReserveButton();
-
-
         try {
-            System.out.println("Waiting for 10 seconds...");
-            Thread.sleep(10000); // 5000 milliseconds = 5 seconds
+            Thread.sleep(5000); // 5000 milliseconds = 5 seconds
         } catch (InterruptedException e) {
-            System.err.println("Thread sleep interrupted: " + e.getMessage());
-            // It's good practice to restore the interrupted status if the interruption is unexpected
             Thread.currentThread().interrupt();
         }
+
+        // Now call the clickIWillReserveButton method
+        clickIWillReserveButton();
+
+        // Wait for the button click to process and navigate to the last page
+        try {
+            Thread.sleep(15000); // 5000 milliseconds = 5 seconds
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
     }
-
-
 }

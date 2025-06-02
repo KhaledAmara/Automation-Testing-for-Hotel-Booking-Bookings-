@@ -1,4 +1,3 @@
-
 package tests;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
@@ -6,36 +5,29 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import pages.DetailsPage;
-import pages.HomePage;
-import pages.SearchResultPage;
 
 public class BaseTest {
 
-    protected WebDriver driver;
-    protected HomePage homePage;
-    protected SearchResultPage searchResultPage;
-    protected DetailsPage detailsPage;
+    protected WebDriver driver; // WebDriver instance, accessible by test classes
 
     @BeforeMethod
     public void setup() {
+        // Setup EdgeDriver using WebDriverManager
         WebDriverManager.edgedriver().setup();
+        // Initialize EdgeDriver
         driver = new EdgeDriver();
+        // Maximize the browser window
         driver.manage().window().maximize();
+        // Navigate to Booking.com homepage
         driver.get("https://www.booking.com");
 
-        homePage = new HomePage(driver);
-        searchResultPage = new SearchResultPage(driver);
-        detailsPage = new DetailsPage(driver);
-
-        System.out.println("Browser opened and navigated to Booking.com homepage.");
     }
 
     @AfterMethod
     public void teardown() {
+        // Close the browser if the driver instance is not null
         if (driver != null) {
             driver.quit();
-            System.out.println("Browser closed.");
         }
     }
 }
